@@ -4,7 +4,23 @@ import numpy as np
 import faiss
 from sentence_transformers import SentenceTransformer
 from transformers import pipeline
+from sklearn.metrics import accuracy_score
+import difflib
 
+
+# Function to calculate similarity between two strings
+def string_similarity(a, b):
+    return difflib.SequenceMatcher(None, a.lower(), b.lower()).ratio()
+
+def evaluate_chatbot(eval_df, qa_pipeline):
+    results = []
+    for _, row in eval_df.iterrows():
+        question = row["question"]
+        true_answer = row["answer"]
+        pred_answer = chatbot_query(question, qa_pipeline)
+        similarity = string_similarity(pred_answer, true_answer)
+        results.append(similarity)
+    return sum(results) / len(results)  # average similarity (0-1)
 # -----------------------
 # File paths (update these before running)
 # -----------------------
@@ -106,3 +122,11 @@ if st.button("Ask") and user_question.strip() != "":
     with st.spinner("Thinking..."):
         answer = chatbot_query(user_question, qa_pipeline)
     st.success(f"**Answer:** {answer}")
+
+st.subheader("📊 Evaluate Chatbot Accuracy")
+
+if st.button("Run Evaluation"):
+    eval_df = pd.read_csv("eval_data.csv")
+    accuracy = evaluate_chatbot(eval_df, qa_pipeline)
+    st.metric("Chatbot Accuracy", f"{accuracy*100:.2f}%")
+
